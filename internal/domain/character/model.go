@@ -44,4 +44,7 @@ type Character struct {
 	Bonds             string `gorm:"type:text" json:"bonds"`
 	Flaws             string `gorm:"type:text" json:"flaws"`
 	Backstory         string `gorm:"type:text" json:"backstory"`
+
+	// Skills (JSON con indices de skills con proficiencia)
+	SkillProficiencies string `gorm:"type:text;default:'[]'" json:"skill_proficiencies"`
 }
