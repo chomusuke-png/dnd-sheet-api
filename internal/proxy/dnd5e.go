@@ -140,12 +140,18 @@ type SavingThrow struct {
 	Index string `json:"index"`
 }
 
+type ProficiencyChoice struct {
+	Choose int         `json:"choose"`
+	From   []ListEntry `json:"from"`
+}
+
 type ClassData struct {
-	Index               string        `json:"index"`
-	Name                string        `json:"name"`
-	HitDie              int           `json:"hit_die"`
-	SavingThrows        []SavingThrow `json:"saving_throws"`
-	SpellcastingAbility string        `json:"spellcasting_ability"`
+	Index               string              `json:"index"`
+	Name                string              `json:"name"`
+	HitDie              int                 `json:"hit_die"`
+	SavingThrows        []SavingThrow       `json:"saving_throws"`
+	SpellcastingAbility string              `json:"spellcasting_ability"`
+	ProficiencyChoices  []ProficiencyChoice `json:"proficiency_choices"`
 }
 
 func (client *Dnd5eClient) GetRaceData(index string) (*RaceData, error) {
@@ -212,6 +218,40 @@ func (client *Dnd5eClient) GetClassData(index string) (*ClassData, error) {
 	if spellcasting, ok := raw["spellcasting"].(map[string]interface{}); ok {
 		if spellcastingAbility, ok := spellcasting["spellcasting_ability"].(map[string]interface{}); ok {
 			classData.SpellcastingAbility = spellcastingAbility["index"].(string)
+		}
+	}
+
+	// Parsea proficiency_choices filtrando solo skills
+	if choices, ok := raw["proficiency_choices"].([]interface{}); ok {
+		for _, choice := range choices {
+			choiceMap := choice.(map[string]interface{})
+
+			proficiencyChoice := ProficiencyChoice{
+				Choose: int(choiceMap["choose"].(float64)),
+			}
+
+			if fromData, ok := choiceMap["from"].(map[string]interface{}); ok {
+				if options, ok := fromData["options"].([]interface{}); ok {
+					for _, option := range options {
+						optionMap := option.(map[string]interface{})
+						if item, ok := optionMap["item"].(map[string]interface{}); ok {
+							itemIndex := item["index"].(string)
+							itemName := item["name"].(string)
+							// Solo incluye skills (prefijo "skill-")
+							if len(itemIndex) > 6 && itemIndex[:6] == "skill-" {
+								proficiencyChoice.From = append(proficiencyChoice.From, ListEntry{
+									Index: itemIndex,
+									Name:  itemName,
+								})
+							}
+						}
+					}
+				}
+			}
+
+			if len(proficiencyChoice.From) > 0 {
+				classData.ProficiencyChoices = append(classData.ProficiencyChoices, proficiencyChoice)
+			}
 		}
 	}
 
